@@ -2,6 +2,9 @@ import requests
 import re
 from bs4 import BeautifulSoup as bs
 import execjs
+import re
+import time
+import json
 
 DEBUG = True
 
@@ -10,6 +13,12 @@ class wenshu():
         with open('./getKey.js') as f:
             js = f.read()
             self.JsVl5x = execjs.compile(js)
+        with open('./Navi.js') as f1:
+            js = f1.read()
+            self.JsNavi = execjs.compile(js)
+        # testResult = self.getDocID('ZcONTQrDgjAQwobDocKrSBTCmkLClcKJw7Ynw6IVXMK6w4zCpm1mbMKgwrViZkA8wr3DicOCwpXCm3cxD3wTwpFvYcOBVVgXO8KtwrYvwowyw7M1RFbDpWHCjFHCqwnDg31iVW1UA8OwfMO/w47CtD54H8ODB8KzGMKbw6HDsjcww7Eya8OlwqQbaUhFT8K5wrVxw5LCkD87IcKCw5HCiR3CqHPDkkJvwpPDtsOgwpPDlsKAwqnDhsO6wqzCvnFyAjjCpg9FZQDD')
+        # print(testResult)
+        # time.sleep(123)
         self.Headers = {'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.90 Safari/537.36'}
         self.__createSession()
         content=self.s.get("http://wenshu.court.gov.cn/",headers=self.Headers).content.decode('utf-8')
@@ -72,6 +81,8 @@ class wenshu():
         else:
             print("初始化失败")
 
+    # return the document Url for the result(depends on keyword and other arguments)
+    # return a list
     def query(self,keyword:str):
         vjkl5 = self.getvjkl5()
         vl5x = self.getvl5x(vjkl5)
@@ -80,15 +91,64 @@ class wenshu():
         'guid': '9fe7a1b7-ca7d-898cee5c-894a7adb1c4a'}
         res = self.s.post('http://wenshu.court.gov.cn/List/ListContent',headers=self.Headers,data=Form)
         content = res.content.decode('utf-8')
+        # print(content)
         print(content)
-        # JsString = self.getJsText(content)
-        # JsString = self.hookJs(JsString)
-        # Postfix = self.getUrlPostfix(JsString)
-        # url = 'http://wenshu.court.gov.cn'+Postfix
-        # print("Post验证前的URL=", url)
-        # content = self.s.get(url,headers=self.Headers).content.decode('utf-8')
-        # return content
+        InfoList = eval(eval(content))
+        # InfoList1 = eval(content1)
+        print(type(InfoList))
+        # print(type(InfoList1))
+        RunEvalString = InfoList[0]['RunEval']
+        print(RunEvalString)
+        # get the true com.str._KEY
+        key = self.getKEY(RunEvalString)
+
+        IDlist = []
+        if len(InfoList) > 1:
+            try:
+                for i in InfoList[1:]:
+                    IDlist.append(i['文书ID'])
+            except KeyError:
+                pass
+            print('获取到',len(IDlist),'个ID')
+            # update key
+            print('IDlist =',IDlist)
+        else:
+            print('没有获取到文书ID')
+
+        DocIDlist = []
+        UrlList = []
+        if IDlist!= []:
+            for id in IDlist:
+                temp = self.getDocID(id,key)
+                DocIDlist.append(temp)
+            UrlList = [self.getDocumentUrl(a) for a in DocIDlist]
+        return UrlList
+
+    # Process DocID from id
+    def getDocID(self,id,key):
+        # print('enter get DocID')
+        DocID = self.JsNavi.call('Navi',id,key)
+        print('Navi id = ', id)
+        # print('succeed get DocID')
+        return DocID
+
+    # each time you get a RunEval key from post method
+    # you run this to update the com.str._KEY in the js
+    def getKEY(self,RunEval):
+        result = self.JsNavi.call('jsfuck',RunEval)
+        # print('RunEval = ',RunEval)
+        # com = self.JsNavi.call('checkcom')
+        # print('after update, _KEY=',com)
+        return result
+
+
+    # get Document Url
+    def getDocumentUrl(self,DocID):
+        return 'http://wenshu.court.gov.cn/CreateContentJS/CreateContentJS.aspx?DocID=' + DocID
+
+
 
 if __name__ == '__main__':
     e = wenshu()
     result = e.query('奇艺')
+    print(result)

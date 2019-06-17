@@ -603,6 +603,7 @@ function binb2b64(binarray) {
     }
     return str;
 }
+
 // function getCookie(name) {
 //
 //     console.log(name);
@@ -614,7 +615,6 @@ function binb2b64(binarray) {
 //         return null
 //     }
 // }
-
 // var vjkl5 = "a3ae94ff1a5b3d01591875d1a8fe3ae3136fb340";
 // result = getKey(vjkl5);
 // console.log(result)
